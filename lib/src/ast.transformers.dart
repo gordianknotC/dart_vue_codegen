@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:analyzer/analyzer.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/syntactic_entity.dart';
@@ -7,13 +5,12 @@ import 'package:analyzer/dart/ast/standard_ast_factory.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:front_end/src/scanner/token.dart'
-   show BeginToken, CommentToken, KeywordToken, SimpleToken, StringToken;
+   show BeginToken, CommentToken,  SimpleToken ;
 import 'package:quiver/collection.dart' show DelegatingMap;
 import 'package:analyzer/src/dart/ast/ast.dart';
 
 
 import 'package:common/src/common.dart' show FN;
-import 'package:astMacro/src/ast.parsers.dart';
 import 'package:common/src/common.log.dart' show Logger, ELevel;
 
 

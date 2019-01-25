@@ -3,7 +3,7 @@ import 'package:analyzer/analyzer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:astMacro/src/ast.transformers.dart';
 import 'package:test/test.dart';
-import 'package:path/path.dart' show join, dirname;
+import 'package:path/path.dart' show join;
 
 /*import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/ast_factory.dart';
@@ -18,6 +18,7 @@ import 'package:colorize/colorize.dart' show color, Colorize, Styles;*/
 import 'package:astMacro/src/ast.utils.dart';
 import 'package:astMacro/src/ast.dart';
 
+const expect_project_root = r"E:\MyDocument\Dart\myPackages\astMacro";
 const SAMPLE_CODE = r'''
 library temp;
 
@@ -400,8 +401,8 @@ class OriginalComponentA extends VueApp implements IVue {
 ''';
 
 
-main() {
-   final SAMPLE_PTH  = join(r"E:\MyDocument\Dart\astMacro\test", "sampleCode.dart");
+TestCase_astTest() {
+   final SAMPLE_PTH  = join("$expect_project_root\\test", "sampleCode.dart");
    final codes       = File(SAMPLE_PTH).readAsStringSync();
    group('test delegateMap', (){
       var res = Dict({'filename': 'helloworld.dart'});

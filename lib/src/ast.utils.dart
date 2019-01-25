@@ -3,17 +3,16 @@ import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/syntactic_entity.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:colorize/colorize.dart';
-import 'package:front_end/src/scanner/token.dart'
-   show BeginToken, KeywordToken, SimpleToken, StringToken;
-import 'package:analyzer/src/dart/ast/ast.dart';
+/*import 'package:front_end/src/scanner/token.dart'
+   show BeginToken, KeywordToken, SimpleToken, StringToken;*/
 
 
-var _AST_STRUCT = {
-   /*
+/*var _AST_STRUCT = {
+   *//*
             annotation related
          -------------------------
          
-   */
+   *//*
    AnnotationImpl: [
       SimpleToken, //@
       SimpleIdentifierImpl, //AnnotationName
@@ -171,13 +170,13 @@ var _AST_STRUCT = {
       NullLiteralImpl,
       BeginToken
    ],
-   /*
+   *//*
    *
    *                 class ast related
    *
    *
    *
-   * */
+   * *//*
    ClassDeclarationImpl: [
       KeywordToken, // [class] ClsName
       DeclaredSimpleIdentifier, // class [ClsName]
@@ -378,11 +377,11 @@ var _AST_STRUCT = {
       DeclaredSimpleIdentifier,
       FormalParameterListImpl
    ],
-   /*GenericFunctionTypeImpl: [
+   *//*GenericFunctionTypeImpl: [
       TypeNameImpl,
       KeywordToken,
       FormalParameterListImpl
-   ],*/
+   ],*//*
    WhileStatementImpl: [
       KeywordToken,
       BeginToken,
@@ -408,7 +407,7 @@ var _AST_STRUCT = {
    ],
    IndexExpressionImpl: [SimpleIdentifierImpl, BeginToken, SimpleToken],
    PostfixExpressionImpl: [SimpleIdentifierImpl, SimpleToken]
-};
+};*/
 
 
 /*

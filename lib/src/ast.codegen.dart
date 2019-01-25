@@ -5,7 +5,7 @@ info: Unused import: 'package:quiver/collection.dart'. (unused_import at [astMac
 */
 //@fmt:off
 
-import 'package:analyzer/analyzer.dart';
+import 'package:analyzer/analyzer.dart' show AstNode, CommentReference, ParameterKind, Statement, TypeAnnotation;
 import 'package:analyzer/dart/ast/standard_ast_factory.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/syntactic_entity.dart';
@@ -72,7 +72,9 @@ final tok_tilde_slash= Token(TokenType.TILDE_SLASH, 0);
 final tok_comma      = Token(TokenType.COMMA, 0);
 final tok_colon      = Token(TokenType.COLON, 0);
 final tok_tilde_slash_eq = Token(TokenType.TILDE_SLASH_EQ, 0);
-
+final tok_null = Token(Keyword.NULL, 0);
+final tok_imp  = Token(Keyword.IMPORT, 0);
+final tok_this = Token(Keyword.THIS, 0);
 
 
 class UnsupportedArgumentsException implements Exception {
@@ -217,7 +219,6 @@ class TType<E>  {
       }
    }
    TType.astNodeInit(dynamic namedOrFuncParser){
-      var type;
       guard((){
          if (namedOrFuncParser is FuncTypeParser){
             var func_retType = TType.astNodeInit(namedOrFuncParser.retType);
@@ -454,17 +455,17 @@ class States {
    
    static SwitchStatementImpl
    Switch(){
-   
+      throw Exception('not Implemented yet');
    }
    
    static LabeledStatementImpl
    label(){
-   
+      throw Exception('not Implemented yet');
    }
    
    static YieldStatementImpl
    yield(){
-   
+      throw Exception('not Implemented yet');
    }
 }
 
@@ -1326,7 +1327,7 @@ astElement<T>(T element) {
    } else if (element is AstNode) {
       return element;
    } else if (element == null){
-      return astFactory.nullLiteral(Token(Keyword.NULL, 0));
+      return astFactory.nullLiteral(tok_null);
    } else if (element is SyntacticEntity) {
       return element as AstNode;
    }  else {
@@ -1362,7 +1363,7 @@ astPropAccs<PREFIX_OR_ACCS extends ExpressionImpl>(List<String> value) {
    if (head.first == THIS) {
       target = head.length > 1
          ? astPropAccs(head)
-         : ThisExpressionImpl(Token(Keyword.THIS, 0));
+         : ThisExpressionImpl(tok_this);
       propname = astIdent(last);
       return PropertyAccessImpl(target, op, propname) as PREFIX_OR_ACCS;
    } else {
@@ -1386,7 +1387,7 @@ astPropAccs<PREFIX_OR_ACCS extends ExpressionImpl>(List<String> value) {
 */
 TypeNameImpl
 astNamedType(String name, [List<String> type_params]) {
-   var typename, typeargs, question;
+   var typename, typeargs ;
    typename = astIdent(name);
    typeargs = type_params != null
         ? astTypeArguments(type_params)
@@ -1424,7 +1425,6 @@ astInlineParamTypeFunc(String func_name, {List<Tuple<String, String>>  funcType_
    var parameters = astParamList(arguments);
    var identifier = astIdent(func_name);
    var type_params  = astTypeParams(funcType_params);
-   var question     = null;
    return FunctionTypedFormalParameterImpl(comment, metadata, covariantKeyword, ret_type, identifier, type_params, parameters);
 }
 

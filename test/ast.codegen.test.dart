@@ -44,7 +44,7 @@ class TempIdent {
 }
 
 
-main() {
+TestCase_astCodegenTest() {
    group('general ast generating tests - int, string, list, map, propertyAccess', () {
       test('astIdent', () {
          var res = astIdent('ArbiraryIdentity');
@@ -394,7 +394,6 @@ main() {
       }
    ''';
    var AST = parseCompilationUnit(sources);
-   var members = (AST.declarations.first as ClassDeclarationImpl).members;
    group('generating ast of class methods', (){
       test('general method', (){
          var expected_source = 'E hybriArgMethod(String name, {Map<String> setting = DSETTING}) {return null;}';
@@ -469,7 +468,6 @@ main() {
       print(dumpAst(AST));
       test('generating generic_field_with_typecasted_value;', () {
          var expected_source = "E generic_field_with_typecasted_value = '13' as E;";
-         var is_async = false, is_yieldable = false;
          var field = FieldGen()
             ..addNames(['generic_field_with_typecasted_value'])
             ..addType(TType(name: 'E'))

@@ -1,5 +1,4 @@
-import 'dart:io';
-import 'package:analyzer/analyzer.dart';
+/*import 'dart:io';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/ast_factory.dart';
 import 'package:analyzer/dart/ast/syntactic_entity.dart';
@@ -8,9 +7,11 @@ import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:path/path.dart' show join, dirname;
 import 'package:quiver/collection.dart' show DelegatingMap;
 import 'package:front_end/src/scanner/token.dart' show KeywordToken, SimpleToken, StringToken;
-import 'package:colorize/colorize.dart' show color, Colorize, Styles;
+import 'package:colorize/colorize.dart' show color, Colorize, Styles;*/
 
+import 'dart:io';
 
+import 'package:analyzer/analyzer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/src/dart/ast/ast.dart';
 import 'package:astMacro/src/ast.parsers.dart';
@@ -18,6 +19,8 @@ import 'package:astMacro/src/ast.transformers.dart';
 import 'package:astMacro/src/ast.utils.dart';
 import 'package:common/src/common.dart';
 import 'package:test/test.dart';
+import 'package:IO/src/io.dart' show getScriptPath, Path;
+
 
 typedef TVoid = void Function();
 
@@ -37,9 +40,143 @@ getClassMembers<T extends ClassMember>(ClassDeclarationImpl node) {
    return node.members.where((member) => member is T).whereType();
 }
 
+TestCase_astParserFileParserTest(){
+   var file_path = Path.join( getScriptPath(Platform.script) , 'sampleCode.dart');
+   print('file_path: $file_path');
+   var file_string = File(file_path).readAsStringSync();
+   var code = parseCompilationUnit(file_string);
+   var file_parser = DartFileParser(code: code, uri: Uri.file(file_path));
+   var import_parsers = file_parser.imp_divs;
 
+   group("Test ImportParser", (){
+      const
+         P1 = 'package:colorize/colorize.dart',
+         P2 = 'dart:io',
+         P3 = 'package:js/js.dart';
+      const
+         F1 = 'C:\\Users\\gordianknot\\AppData\\Roaming\\Pub\\Cache\\hosted\\pub.dartlang.org\\colorize-2.0.0\\lib\\colorize.dart',
+         F2 = 'C:\\Users\\gordianknot\\AppData\\Roaming\\Pub\\Cache\\hosted\\pub.dartlang.org\\io-0.3.3\\lib\\io.dart',
+         F3 = 'C:\\Users\\gordianknot\\AppData\\Roaming\\Pub\\Cache\\hosted\\pub.dartlang.org\\js-0.6.1+1\\lib\\js.dart';
+   
+      test('check import string literal path', (){
+         expect(import_parsers[0].path, P1);
+         expect(import_parsers[1].path, P2);
+         expect(import_parsers[2].path, P3);
+      });
+   
+      test('check parsing real path from import clause', (){
+         var file1 = import_parsers[0].getImportFile(P1);
+         expect(file1.path, F1);
+      
+         var file2 = import_parsers[1].getImportFile(P2);
+         expect(file2, null);
+      
+         var file3 = import_parsers[2].getImportFile(P3);
+         expect(file3.path, F3);
+      });
+   
+      test('check path', (){
+         expect(import_parsers[0].path, P1);
+         expect(import_parsers[1].path, P2);
+         expect(import_parsers[2].path, P3);
+      });
+   
+      test('check source_file', (){
+         expect(import_parsers[0].source_file.path, F1);
+         expect(import_parsers[1].source_file     , null);
+         expect(import_parsers[2].source_file.path, F3);
+      });
+   
+      test('check members in show clause', (){
+         expect(import_parsers[0].shows.map((s) => s.name),
+            ['color', 'Colorize', 'Styles']);
+      });
+   
+      test('check member in as clause', (){
+         expect(import_parsers[3].decl_as.name, '_');
+      });
+   
+      test('get file content of colorize from importParser', (){
+         var c = import_parsers[0].content;
+         var expected = ignoreWhiteSpace("""
+            library colorize;
+            
+            part "src/styles.dart";
+            part "src/colorize.dart";
+            part "src/color.dart";
+            """);
+         print(c);
+         expect(ignoreWhiteSpace(c), expected);
+      });
 
-main() {
+      test('preFilterReference in colorize import clause', (){
+         var tobe_sought = import_parsers[0].preFilterReferece(['Vue.hello', 'world', 'color']).toList();
+         expect(tobe_sought, ['color']);
+   
+         tobe_sought = import_parsers[3].preFilterReferece(['Vue.hello', '_.world']);
+         expect(tobe_sought, ['_.world']);
+      });
+   });
+   
+   group("Test ClassDeclParser for super fetching", (){
+      var cls  = file_parser.cls_decls.firstWhere((cls) => cls.name.name == 'PropertiesDefinition');
+      var cls2 = file_parser.cls_decls.firstWhere((cls) => cls.name.name == 'OriginalComponentA');
+      var cls3 = file_parser.cls_decls.firstWhere((cls) => cls.name.name == 'ClsExtendFromImport');
+      var cls4 = file_parser.cls_decls.firstWhere((cls) => cls.name.name == 'ClsExtendFromDeclAs');
+      test("validate super_names", (){
+         expect(cls.super_names, ['IPropertiesDefinition' ,'PropertyValidation']);
+         expect(cls2.super_names, ['VueApp' ,'IVue']);
+         expect(cls3.super_names, ['Colorize' ,'SampleApp']);
+         expect(cls4.super_names, ['_.FN' ,'SampleApp']);
+      });
+
+      test('fetching super classes extends within file', (){
+         var super_names = <String>[]..addAll(cls.super_names);
+         var super_cls = ClassifiedDeclParser.getSupersDefinedInFile
+            (cls.file, super_names).map((cls) => cls.name.name).toList();
+         expect(super_cls, ['IPropertiesDefinition' ,'PropertyValidation']);
+         
+         super_names = <String>[]..addAll(cls2.super_names);
+         var super_cls2 = ClassifiedDeclParser.getSupersDefinedInFile
+            (cls2.file, super_names).map((cls) => cls.name.name).toList();
+         expect(super_cls2, ['VueApp' ,'IVue']);
+         
+      });
+      
+      test('A - fetching super classes extends either within file or external import', (){
+         var super_names = <String>[]..addAll(cls3.super_names);
+         var super_cls = ClassifiedDeclParser.getSupersDefinedInFile
+            (cls.file, super_names).map((cls) => cls.name.name).toList();
+         
+         expect(super_cls, ['SampleApp']);
+      });
+
+      test('B - fetching super classes extends either within file or external import', (){
+         var super_cls = ClassifiedDeclParser.getSupersDefinedWithinImports
+            (cls.file, ['Colorize']).map((cls) => cls.name.name).toList();
+         
+         expect(super_cls, ['Colorize']);
+      });
+      
+      test('C - fetching super classes extends either within file or external import', (){
+         var super_cls = cls3.supers.map((cls) => cls.name.name).toList();
+         expect(super_cls, unorderedEquals(['Colorize', 'SampleApp']));
+      });
+      
+      test('fetching root classes', (){
+         var root_cls = cls2.roots.map((cls) => cls.name.name).toList();
+         expect(root_cls, ['VueApp', 'Empty']);
+      });
+      
+      test('get supers from class which inherited from import as clause', (){
+         var super_cls = cls4.supers.map((cls) => cls.name.name).toList();
+         expect(super_cls, ['SampleApp', 'FN']);
+      });
+   });
+   
+}
+
+TestCase_astParserTest() {
    var CODE       = r'''
       abstract class TestForMethods<E extends String> {
          static var                             no_type_speicified_static_field;
@@ -174,7 +311,6 @@ main() {
    var cls        = cls_decls.first as ClassDeclarationImpl;
    var cls_parser = ClassDeclParser(cls);
    var fields     = cls_parser.fields;
-   var methods    = cls_parser.methods;
    
    group("Learning ast of class methods", () {
       print(dumpAst(AST));
@@ -183,7 +319,6 @@ main() {
                        List ref_methods, List ref_fields}) {
          var method_targets = cls_parser.getMethod(name);
          var method_first   = method_targets.first;
-         var method_last    = method_targets.last;
          var _body_refs     = method_first.refs_in_body?.map((ref) => ref.refs?.map((r) => r.name)?.toList())?.toList();
          var _ret_type_args = method_first.ret_type?.namedType?.typeargs?.arguments?.map((a) => (a as TypeNameImpl).name.name);
          var _type_params   = method_first.type_params?.typeParameters?.map((t) => t.name.name);

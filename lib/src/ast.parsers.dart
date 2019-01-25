@@ -192,11 +192,6 @@ class ArgumentListParser extends PrintableDelegation with SearchableNodes {
    List<SyntacticEntity> args;
    ArgumentListImpl origin;
    
-   _isNamedArgsMembers(AstNode node) {
-      return node.parent is ArgumentListImpl
-             && node is NamedExpressionImpl;
-   }
-   
    _isListArgMembers(SyntacticEntity node, SyntacticEntity parent) {
       return parent is ArgumentListImpl
              && node is! BeginToken
@@ -311,7 +306,7 @@ class FormalParameterParser<E extends AstNode> extends PrintableDelegation with 
       });
    }
    
-   _thisFieldTypeInit(FieldFormalParameterImpl node, ClassDeclParser classOwner) {
+   _thisFieldTypeInit(FieldFormalParameterImpl node, ClassifiedDeclParser classOwner) {
       //[EX] ..., this.prop
       var ref = getNode<KeywordToken>(node)?.lexeme;
       is_thisRef = ref == THIS;
@@ -345,7 +340,7 @@ class FormalParameterParser<E extends AstNode> extends PrintableDelegation with 
       func_type = FuncTypeParser(node);
    }
    
-   FormalParameterParser(AstNode node, [ClassDeclParser classOwner]) {
+   FormalParameterParser(AstNode node, [ClassifiedDeclParser classOwner]) {
       origin = node;
       if (node is SimpleFormalParameterImpl) {
          _simpleTypeInit(node);
@@ -415,9 +410,6 @@ class FormalParameterListParser extends PrintableDelegation with SearchableNodes
    
    FormalParameterListParser(FormalParameterListImpl node) {
       origin = node;
-      var _params = node.parameters.map((p) => FormalParameterParser(p));
-      /*params = _params.where((p) => !p.is_default_param);
-      default_params = params.where((p) => p.is_default_param);*/
       
       params = node.childEntities.where((child) => _isNonDefaultParams(child))
          .map((child) => FormalParameterParser(child));
@@ -630,7 +622,7 @@ abstract class FieldsContainer{
    bool is_final;
    bool is_static;
    bool is_dynamic;
-   ClassDeclParser            classOwner;
+   ClassifiedDeclParser            classOwner;
    TypeNameImpl               named_type;
    FuncTypeParser             func_type;
    List<SimpleIdentifier>     variables;
@@ -640,13 +632,13 @@ abstract class FieldsContainer{
 
 //tested: ok:
 //@fmt:off
-class FieldsParser extends BaseDeclParser<FieldDeclarationImpl, ClassDeclarationImpl> implements FieldsContainer{
+class FieldsParser extends BaseDeclParser<FieldDeclarationImpl, ClassOrMixinDeclarationImpl> implements FieldsContainer{
    bool is_public;
    bool is_const;
    bool is_final;
    bool is_static;
    bool is_dynamic;
-   ClassDeclParser            classOwner;
+   ClassifiedDeclParser            classOwner;
    TypeNameImpl               named_type;
    FuncTypeParser             func_type;
    List<SimpleIdentifier>     variables;
@@ -713,17 +705,6 @@ class FieldsParser extends BaseDeclParser<FieldDeclarationImpl, ClassDeclaration
    }
 } //@fmt:on
 //@fmt:off
-
-bool _isRootLevelPropertyAccess(AstNode context){
-   return context.parent is! PropertyAccessImpl
-       && context.parent is! PrefixedIdentifierImpl;
-}
-
-bool _isPropertyAccess(AstNode context){
-   return context is PropertyAccessImpl
-       || context is PrefixedIdentifierImpl;
-}
-
 
 
 
@@ -951,11 +932,9 @@ class Refs<P, R> {
             //if (syn is VariableDeclarationImpl) overrides.add(syn.name.name);
             //else if (syn is VariableDeclarationListImpl) overrides.addAll(syn.variables.map((v) => v.name.name).toList());
             var result = <T>[];
-            var key = syn; //.toString();
             if (cache[syn] == null)
                cache[syn] = result;
             
-            var ckey = context.toString();
             if (cache[context] == null){
                genRefsUpDown<A, B, T>(syn, result, overrides, assignments, cache);
                ret.addAll(result);
@@ -974,9 +953,6 @@ class Refs<P, R> {
             if (declared(syn.name))
                return null;
             
-            var ckey = context.toString();
-            //_log.debug('        simple: $syn ${declared(syn.name)}, cache: ${cache[context.toString()]}');
-
             if (cache[context] == null)
                return ret.add(_.Tuple<A, B>(context, [syn] as B) as T);
             
@@ -1083,9 +1059,9 @@ class Refs<P, R> {
    */
    static Refs<AstNodeImpl, List<SimpleIdentifierImpl>>
    filterReferencesByRoot<Type>(
-      ClassDeclParser                               host_cls,
+      ClassifiedDeclParser                               host_cls,
       Refs<AstNodeImpl, List<SimpleIdentifierImpl>> tuple_ref,
-      [Map<String, List<ClassDeclParser>>           reference_host ])
+      [Map<String, List<ClassifiedDeclParser>>           reference_host ])
    {
       reference_host  ??= {THIS: [host_cls]};
          if (tuple_ref.refs == null || (tuple_ref.refs != null && tuple_ref.refs.length == 0))
@@ -1115,10 +1091,10 @@ class Refs<P, R> {
 
 
 
-class MethodsParser extends BaseDeclParser<MethodDeclarationImpl, ClassDeclarationImpl> {
+class MethodsParser extends BaseDeclParser<MethodDeclarationImpl, ClassOrMixinDeclarationImpl> {
    AType                 ret_type;
    FunctionBody          body;
-   ClassDeclParser       classOwner;
+   ClassifiedDeclParser        classOwner;
    SimpleIdentifierImpl  name;
    ParameterListParser   params;
    TypeParameterListImpl type_params; // [EX] Map<S, E, ...>
@@ -1171,7 +1147,7 @@ class MethodsParser extends BaseDeclParser<MethodDeclarationImpl, ClassDeclarati
          {self: [host, inheritance1, ... inheritanceN]}                     */
    
    List<MethodsParser>
-   getReferencedClassMethods([Map<String, List<ClassDeclParser>> reference_host]){
+   getReferencedClassMethods([Map<String, List<ClassifiedDeclParser>> reference_host]){
       reference_host ??= {THIS: [classOwner]};
       var cache = <MethodsParser>[];
       return getReferencedMethods(reference_host).map<MethodsParser>(
@@ -1198,7 +1174,7 @@ class MethodsParser extends BaseDeclParser<MethodDeclarationImpl, ClassDeclarati
    }
    
    List<FieldsParser>
-   getReferencedClassFields([Map<String, List<ClassDeclParser>> reference_host]){
+   getReferencedClassFields([Map<String, List<ClassifiedDeclParser>> reference_host]){
       reference_host ??= {THIS: [classOwner]};
       var cache = <FieldsParser>[];
       return getReferencedFields(reference_host).map<FieldsParser>(
@@ -1222,7 +1198,7 @@ class MethodsParser extends BaseDeclParser<MethodDeclarationImpl, ClassDeclarati
    }
    
    List<Refs<AstNodeImpl, List<SimpleIdentifierImpl>>>
-   getReferencedFields([Map<String, List<ClassDeclParser>> reference_host]) {
+   getReferencedFields([Map<String, List<ClassifiedDeclParser>> reference_host]) {
       reference_host ??= {THIS: [classOwner]};
       if (classOwner != null)
          return refs_in_body.map((ref) =>
@@ -1232,7 +1208,7 @@ class MethodsParser extends BaseDeclParser<MethodDeclarationImpl, ClassDeclarati
    }
 
    List<Refs<AstNodeImpl, List<SimpleIdentifierImpl>>>
-   getReferencedMethods([Map<String, List<ClassDeclParser>> reference_host]) {
+   getReferencedMethods([Map<String, List<ClassifiedDeclParser>> reference_host]) {
       reference_host ??= {THIS: [classOwner]};
       if (classOwner != null)
          return refs_in_body.map((ref) =>
@@ -1279,15 +1255,6 @@ class MethodsParser extends BaseDeclParser<MethodDeclarationImpl, ClassDeclarati
       delegate['is_getter']   = is_getter;
    }
 
-   bool
-   _isUnderContext(AstNode context){
-      return context is! TypeArgumentListImpl && context is! TypeNameImpl;
-      /*return   context is AssignmentExpressionImpl // field = field;
-               || context is ArgumentListImpl         // call(arg1, arg2...)
-               || context is ReturnStatementImpl      // return field
-               || context is VariableDeclarationImpl  // var a = ...
-               || context is MethodInvocationImpl;    // call(...*/
-   }
 
    // [note] about return type refs
    //    Refs - 1) a tuple liked object records; references as value and parent context as key
@@ -1309,7 +1276,6 @@ class MethodsParser extends BaseDeclParser<MethodDeclarationImpl, ClassDeclarati
       A       ctx;
       B       refs;        // List<Simple>
       List<B> left_refs;   // List<List<Simple
-      List<B> right_refs;  // List<List<Simple
       
       result = ret.map((ctx_ref_pairs){
          ctx = ctx_ref_pairs.key;
@@ -1403,9 +1369,11 @@ class InheritedClassDeclParser extends ClassDeclParser{
   InheritedClassDeclParser(ClassDeclarationImpl node) : super(node);
 }
 
-class ClassDeclParser extends BaseDeclParser<ClassDeclarationImpl, CompilationUnitImpl> {
-   _.Tuple<ExtendsClauseImpl, WithClauseImpl>  ext;
+mixin ClassifiedDeclParser<E extends ClassOrMixinDeclarationImpl> on BaseDeclParser<E, CompilationUnitImpl> {
+   _.Triple<ExtendsClauseImpl, WithClauseImpl, ImplementsClauseImpl>  _cls_ext;
+   _.Triple<ExtendsClauseImpl, WithClauseImpl, OnClauseImpl>  _mixin_ext;
    
+   List<String>             _super_names;
    DartFileParser           file;
    ImplementsClauseImpl     impl;
    Iterable<FieldsParser>   fields;
@@ -1413,12 +1381,12 @@ class ClassDeclParser extends BaseDeclParser<ClassDeclarationImpl, CompilationUn
    DeclaredSimpleIdentifier name;
    List<AnnotationImpl>     _methodsAnnotations;
    List<AnnotationImpl>     _fieldsAnnotations;
-  
+   Iterable<ClassifiedDeclParser> _supers;
+   Iterable<ClassifiedDeclParser> _roots;
    
    bool get is_public => !name.name.startsWith('_');
-   bool get is_abstract => origin.isAbstract;
-                                                                           //@fmt:on
-   
+   bool get is_abstract;
+   bool get is_mixin;
    
    List<AnnotationImpl>
    get methodsAnnotations {
@@ -1442,7 +1410,67 @@ class ClassDeclParser extends BaseDeclParser<ClassDeclarationImpl, CompilationUn
    set fieldsAnnotations(List<AnnotationImpl> v) {
       _fieldsAnnotations = v;
    }
-
+   _.Triple<ExtendsClauseImpl, WithClauseImpl, dynamic>
+   get ext{
+      if (this is ClassDeclParser) return _cls_ext;
+      return _mixin_ext;
+   }
+   
+   List<String>
+   get super_names {
+      if (_super_names != null) return _super_names;
+      var s = [ext.father?.superclass?.name?.name].where((x) => x != null).toList();
+      var withs = ext.mother?.mixinTypes?.map((t) => t?.name?.name)?.toList() ?? [];
+      var imp_or_on = this is ClassDeclParser
+          ? _cls_ext.child?.interfaces?.map((t) => t?.name?.name)?.toList() ?? []
+          : _mixin_ext.child?.superclassConstraints?.map((t) => t?.name?.name)?.toList() ?? [];
+      return _super_names = s + withs + imp_or_on;
+   }
+   
+   List<ClassifiedDeclParser>
+   get supers {
+      if (_supers != null) return _supers;
+      var _super_names = <String>[]..addAll(super_names);
+      return _supers = getSupers(file, _super_names);
+   }
+   
+   List<ClassifiedDeclParser>
+   get roots {
+      if (_roots != null) return _roots;
+      _roots ??= [];
+      _getRootsByClasses(supers, _roots);
+      return _roots;
+   }
+   
+   _getRootsByClasses(List<ClassifiedDeclParser> cls_decls, [List<ClassifiedDeclParser> ret]){
+      for (var i = 0; i < cls_decls.length; ++i) {
+         var cls = cls_decls[i];
+         if (cls.super_names.length == 0){
+            ret.add(cls);
+            continue;
+         }else{
+            _getRootsByClasses(cls.supers, ret);
+         }
+      }
+   }
+   
+   static List<ClassifiedDeclParser>
+   getSupers(DartFileParser file, List<String> _super_names){
+      return DartFileParser.getRefClsFromFile(file, _super_names);
+   }
+   
+   static List<ClassifiedDeclParser>
+   getSupersDefinedWithinImports(DartFileParser file,  List<String> remained_supers){
+      return DartFileParser.getRefClsViaImports(file.imp_divs, remained_supers);
+   }
+   
+   static List<ClassifiedDeclParser>
+   getSupersDefinedInFile(DartFileParser file, List<String> _super_names) {
+      return DartFileParser.getClsFromFile(file, _super_names);
+   }
+   
+   
+   
    List<FieldDeclarationImpl>
    _getFieldNodes() {
       return getNodes<FieldDeclarationImpl>(origin) ?? [];
@@ -1470,7 +1498,8 @@ class ClassDeclParser extends BaseDeclParser<ClassDeclarationImpl, CompilationUn
    getField(String name) {
       return fields.firstWhere((field) => field.names.any((fname) => fname == name), orElse: () => null);
    }
-
+   
+   
 
    /*
    *  [NOTE]
@@ -1493,7 +1522,38 @@ class ClassDeclParser extends BaseDeclParser<ClassDeclarationImpl, CompilationUn
    isMethodMatched(AstNode context, SimpleIdentifierImpl method) {
       return methods.any((m) => m.name.name == method.name);
    }
+}
+class MixinDeclParser extends BaseDeclParser<MixinDeclarationImpl, CompilationUnitImpl> with ClassifiedDeclParser {
+   get ext => _mixin_ext;
+   bool get is_abstract => false;
+   bool get is_mixin => true;
+   
+   MixinDeclParser(MixinDeclarationImpl node, [DartFileParser file]) : super.parentInit(node) {
+      _mixin_ext = _.Triple(
+         getNode<ExtendsClauseImpl>(node),
+         getNode<WithClauseImpl>(node),
+         getNode<OnClauseImpl>(node)
+      );
+      
+      impl      = getNode<ImplementsClauseImpl>(node);
+      fields    = _getFieldNodes().map((f) => FieldsParser(f, this)).toList();
+      methods   = _getMethodNodes().map((m) => MethodsParser(m, this)).toList();
+      name      = getNode<DeclaredSimpleIdentifier>(node);
+      this.file = file;
+      
+      methods.forEach((m) => m.referenceInitialize());
+      delegate['ext']     = ext;
+      delegate['fields']  = fields;
+      delegate['impl']    = impl;
+      delegate['name']    = name;
+      delegate['methods'] = methods;
+   }
+}
 
+class ClassDeclParser extends BaseDeclParser<ClassDeclarationImpl, CompilationUnitImpl> with ClassifiedDeclParser {
+   bool get is_abstract => origin.isAbstract;
+   bool get is_mixin => false;
+   get ext => _cls_ext;
    
    /*
    *  [NOTE]
@@ -1506,9 +1566,12 @@ class ClassDeclParser extends BaseDeclParser<ClassDeclarationImpl, CompilationUn
    *     filter to have a further checking that make sure which
    *     specific field are under specific annotation.
    */
-
    ClassDeclParser(ClassDeclarationImpl node, [DartFileParser file]) : super.parentInit(node) {
-      ext       = _.Tuple(getNode<ExtendsClauseImpl>(node), getNode<WithClauseImpl>(node));
+      _cls_ext = _.Triple(
+         getNode<ExtendsClauseImpl>(node),
+         getNode<WithClauseImpl>(node),
+         getNode<ImplementsClauseImpl>(node)
+      );
       impl      = getNode<ImplementsClauseImpl>(node);
       fields    = _getFieldNodes().map((f) => FieldsParser(f, this)).toList();
       methods   = _getMethodNodes().map((m) => MethodsParser(m, this)).toList();
@@ -1577,14 +1640,8 @@ class TopFuncDeclParser extends BaseDeclParser<FunctionDeclarationImpl, Compilat
 }
 
 
-
-/*ImportDirectiveImpl: [
-   SimpleStringLiteralImpl,
-   ShowCombinatorImpl,
-   SimpleToken
-],*/
-class ImportParser extends PrintableDelegation with SearchableNodes {
-   static Map<String, ImportParser> cache = {};
+mixin ImportOrExportParser on PrintableDelegation, SearchableNodes {
+   static Map<String, ImportOrExportParser> cache = {};
    static Map<String, String> package_cfg = _.Dict<String, String>(
       File(io.Path.rectifyPath(Platform.packageConfig))
          .readAsStringSync().trim().split('\n')
@@ -1597,32 +1654,20 @@ class ImportParser extends PrintableDelegation with SearchableNodes {
    );
    DartFileParser host_parser;
    DartFileParser _content_parser;
-   List<String>   _exports;
 
    List<SimpleIdentifierImpl> shows;
    DeclaredSimpleIdentifier   decl_as;
-   ImportDirectiveImpl        origin;
+   ImportDirectiveImpl        _import_origin;
+   ExportDirectiveImpl        _export_origin;
+   String  _content;
+   String  path;
+   File    source_file;
    
-   String       _content;
-   String       path;
-   File         source_file;
+   NamespaceDirectiveImpl
+   get origin => _import_origin ?? _export_origin;
    
-   List<String>
-   get exports {
-      if (_exports != null) return _exports;
-      if (decl_as != null){
-         _exports = shows != null && shows.first != decl_as
-            ? shows.map((show) => '${decl_as.name}.${show.name}').toList()
-            : shows == null
-               ? content_parser.exported_references.map((exported) => '${decl_as.name}.$exported')
-               : content_parser.exported_references.map((exported) => '${decl_as.name}.$exported');
-      }else{
-         _exports = shows != null
-            ? shows.map((show) => show.name).toList()
-            : content_parser.exported_references;
-      }
-      return _exports;
-   }
+   bool get is_import_directive => _import_origin != null;
+   bool get is_export_directive => _export_origin != null;
    
    @nullable String
    get content{
@@ -1645,13 +1690,10 @@ class ImportParser extends PrintableDelegation with SearchableNodes {
       if (_content_parser != null) return _content_parser;
       var message = 'parsing dart file failed :${source_file.uri}\nwhile parsing content_parser of import clause "$path"\n';
       _.guard((){
-         var code    = parseCompilationUnit(content, name: path, parseFunctionBodies: true);
+         var code    = parseCompilationUnit(content, parseFunctionBodies: false);
          var parser  = DartFileParser(code:  code, uri: source_file.uri);
          _content_parser = parser;
       }, message);
-      /*var code = parseCompilationUnit(content, name: path, parseFunctionBodies: true);
-      var parser = DartFileParser(code:  code, uri: source_file.uri);
-      _content_parser = parser;*/
       return _content_parser;
    }
    
@@ -1660,17 +1702,60 @@ class ImportParser extends PrintableDelegation with SearchableNodes {
       return !path.startsWith(lib_ptn);
    }
    
+   bool isBuildinPath(String path){
+      var buildin_path = RegExp('dart:');
+      return path.startsWith(buildin_path);
+   }
+   
+   /*
+   
+   [NOTE]
+      Filter Out References While There's As Clause or Show Clause
+      Define in ImportClause.
+      ------------------------------------------------------------
+   [EX]
+      to search references called ['hello', 'Vue.world', 'another_ref']
+      in following import clauses
+      1) import 'abc.dart' show hello;
+      2) import 'efg.dart' as Vue;
+      
+      In Example one:
+      it will filter out 'Vue.world' and 'another_ref', since Vue.world implies
+      it's referenced by importAs clauses, and another_ref implies not a
+      member of 'show hello'.
+      
+      In Example tow:
+      It will filter out 'hello' and 'another_ref', since 'hello' and 'another_ref'
+      implies it's not referenced by importAs clauses.
+   */
+   List<String>
+   preFilterReferece(List<String> ref_names){
+      if (decl_as != null){
+         return  ref_names.where((name) =>
+            name.contains('.') && name.split(".").first == decl_as.name
+         ).toList();
+         
+      }else if (shows != null){
+         return ref_names.where((name){
+            return shows.any((ident) =>
+               !name.contains('.') && name == ident.name
+            );
+         }).toList();
+      }else{
+         return ref_names.where((ref_name) => !ref_name.contains('.')).toList();
+      }
+   }
+   
    @nullable String
    _getImportPath(String import_path){
+      if (isBuildinPath(import_path)) return null;
       if (isFilePath(import_path)){
          return io.Path.join(
             io.Path.dirname(host_parser.file_path) ,
             import_path
          );
       }else{
-         //todo:
-         //note: parsing from package file is not supported
-         //return null;
+         //parsing from package file is not supported
          var segs = _.FN.split(import_path, ":", 2);
          var package_paths = _.FN.split(segs[1], '/', 1);
          var package_name  = package_paths[0];
@@ -1678,36 +1763,46 @@ class ImportParser extends PrintableDelegation with SearchableNodes {
          if (base_path == null){
             _.raise('Cannot find package path:${segs.join(':')}.\n'
             'parsing file from package path is not supported\n'
-            'segs: $segs, package_paths: $package_paths');
+            'segs: $segs, package_paths: $package_paths, import_path:$import_path');
             return null;
          }
          
          if (package_paths.length > 1)
             return io.Path.join(package_cfg[package_name], package_paths[1]);
-         return io.Path.rectifyPath(package_cfg[package_name]);
+         return io.Path.join(package_cfg[package_name], '${package_paths[0]}.dart');
+         //return io.Path.rectifyPath(package_cfg[package_name]);
       }
    }
    
    @nullable File
    getImportFile(String import_path){
-      var path, file;
+      String path;
+      File file;
       var message = 'Unable to open path:$import_path\nwhile parsing import clause';
       _.guard((){
-         if (isFilePath(import_path)){
-            path = _getImportPath(import_path);
-            if (path != null)
-               file =  File(path);
-         }
+         path = _getImportPath(import_path);
+         if (path == null) return;
+         file =  File(path);
+         file.exists().then((is_exist){
+            if (!is_exist)
+               throw Exception("cannot get imported file by path: $path");
+         }, onError: (obj, stacktrace){
+            print('import clause: $import_path');
+            print('file path: $path');
+         });
       }, message);
       return file;
    }
    
-   ImportParser.init(ImportDirectiveImpl node, this.host_parser, this.path) {
-      origin          = node;
+   _init(NamespaceDirectiveImpl node){
+      if (node is ImportDirectiveImpl)       _import_origin  = node;
+      else if (node is ExportDirectiveImpl)  _export_origin  = node;
+      else                                   throw Exception('Uncaught Exception');
+      
       var combinator  = getNode<ShowCombinatorImpl>(node);
       var combinators = getNodes<SimpleIdentifierImpl>(combinator);
       decl_as         = getNode<DeclaredSimpleIdentifier>(node);
-      shows           = combinators ?? [decl_as];
+      shows           = combinators.length == 0 ? null : combinators;
       source_file     = getImportFile(path);
       
       delegate['path']  = path;
@@ -1716,40 +1811,223 @@ class ImportParser extends PrintableDelegation with SearchableNodes {
       delegate['content'] = content != null
          ? content.substring(0, 80) + ' ...'
          : null;
-      cache[path] = this;
-   }
-   
-   factory ImportParser(ImportDirectiveImpl node, DartFileParser host_parser){
-      var path = getNode<SimpleStringLiteralImpl>(node).stringValue;
-      if (cache[path] != null)
-         return cache[path];
-      return ImportParser.init(node, host_parser, path);
+      var pth = this is ImportParser
+         ? 'imp:$path'
+         : 'exp:$path';
+      ImportOrExportParser.cache[pth] = this;
    }
 }
 
 
+/*ImportDirectiveImpl: [
+   SimpleStringLiteralImpl,
+   ShowCombinatorImpl,
+   SimpleToken
+],*/
+class ImportParser extends PrintableDelegation with SearchableNodes, ImportOrExportParser {
+   String         path;
+   DartFileParser host_parser;
+   
+   static ImportDirectiveImpl
+   partDivToImportDiv (PartDirectiveImpl part){
+      var metadata = part.metadata;
+      var keyword = tok_imp;
+      var libraryUri = part.uri;
+      var configurations = <Configuration>[];
+      return ImportDirectiveImpl(null, metadata, keyword, libraryUri,
+         configurations, null, null, null, null, tok_semi);
+   }
+   
+   
+   ImportParser.init(ImportDirectiveImpl node, this.host_parser, this.path) {
+      _init(node);
+   }
+   
+   factory ImportParser(ImportDirectiveImpl node, DartFileParser host_parser){
+      var path = getNode<SimpleStringLiteralImpl>(node).stringValue;
+      var parser = ImportOrExportParser.cache['imp:$path'];
+      if (parser != null){
+         if (parser is ExportParser){
+            _.raise("failed to initialize ImportParser for path:$path, node:$node");
+         }
+         return parser;
+      }
+      return ImportParser.init(node, host_parser, path);
+   }
+}
+
+class ExportParser extends PrintableDelegation with SearchableNodes, ImportOrExportParser {
+   String         path;
+   DartFileParser host_parser;
+   ExportParser.init(ExportDirectiveImpl node, this.host_parser, this.path) {
+      _init(node);
+   }
+   
+   factory ExportParser(ExportDirectiveImpl node, DartFileParser host_parser){
+      var path = getNode<SimpleStringLiteralImpl>(node).stringValue;
+      if (ImportOrExportParser.cache['exp:$path'] != null)
+         return ImportOrExportParser.cache['exp:$path'];
+      return ExportParser.init(node, host_parser, path);
+   }
+}
+
 class DartFileParser extends PrintableDelegation with SearchableNodes {
    static Map<String, DartFileParser> cache = {};
+   static DartFileParser
+   openSync(File file) {
+      return DartFileParser(code: parseCompilationUnit(file.readAsStringSync()), uri: file.uri);
+   }
    
+   static Future<DartFileParser>
+   open(File file) {
+      return file.readAsString().then((str) {
+         return DartFileParser(code: parseCompilationUnit(str), uri: file.uri);
+      });
+   }
+   
+   static List<ClassifiedDeclParser>
+   getRefClsFromFile(DartFileParser file, List<String> _super_names){
+      var in_file = getClsFromFile(file, _super_names);
+      if (_super_names.length == 0)
+         return in_file;
+      
+      var imports = getRefClsViaImports(file.imp_divs, _super_names);
+      if (_super_names.length == 0)
+         return in_file + imports;
+      
+      throw Exception(
+         "super class not found: $_super_names\n"
+         "filtered_names:\n"
+         "${file.imp_divs.map((imp) => imp.preFilterReferece(_super_names))}"
+         "\nhas_show_or_as:\n"
+         "${file.imp_divs.map((imp) => imp.shows != null || imp.decl_as != null)}"
+      );
+   }
+   
+   static List<ClassifiedDeclParser>
+   getRefClsViaImports(List<ImportOrExportParser> imp_divs, List<String> remained_supers){
+      var ret = <ClassifiedDeclParser>[];
+      if (imp_divs == null) return ret;
+      for (var i = 0; i < imp_divs.length; ++i) {
+         var imp = imp_divs[i];
+         if (imp.source_file == null)
+            continue;
+         // preFilterReferece: Filter Out References While There's As Clause or
+         // Show Clause Define in ImportClause.
+         var tobe_sought = imp.preFilterReferece(remained_supers);
+         if (tobe_sought.length == 0)
+            continue;
+         var has_show_or_as = imp.shows != null || imp.decl_as != null;
+         if (has_show_or_as){
+            for (var j = 0; j < tobe_sought.length; ++j) {
+               var sought_name = tobe_sought[j];
+               if(remained_supers.contains(sought_name)){
+                  remained_supers.remove(sought_name);
+                  // de-target
+                  tobe_sought[j] = tobe_sought[j].split('.').last;
+               }
+            }
+         }else{
+            tobe_sought = remained_supers;
+         }
+         ret.addAll(getClsFromDecls(imp.content_parser.cls_decls, tobe_sought));
+         ret.addAll(getClsFromDecls(imp.content_parser.mixin_decls, tobe_sought));
+         ret.addAll(_getRefClsViaNamespace(imp.content_parser.exp_divs, tobe_sought));
+         ret.addAll(_getRefClsViaNamespace(imp.content_parser.part_divs, tobe_sought));
+      }
+      return ret;
+   }
+   
+   static List<ClassifiedDeclParser>
+   _getRefClsViaNamespace(List<ImportOrExportParser> divs, List<String> remained_supers){
+      var ret = <ClassifiedDeclParser>[];
+      if (divs != null){
+         for (var j = 0; j < divs.length; ++j) {
+            var exp = divs[j];
+            if (exp.source_file == null)
+               continue;
+            ret.addAll(getClsFromDecls(exp.content_parser.cls_decls, remained_supers));
+            ret.addAll(getClsFromDecls(exp.content_parser.mixin_decls, remained_supers));
+            if (remained_supers.length == 0)
+               return ret;
+         }
+      }
+      return ret;
+   }
+   
+   static List<ClassifiedDeclParser>
+   getClsFromFile(DartFileParser file,  List<String> _super_names) {
+      var target_names = _super_names.where((name) => name.contains('.')).toList();
+      // temporary remove and added back later on.
+      for (var i = 0; i < target_names.length; ++i) {
+        var target_name = target_names[i];
+         _super_names.remove(target_name);
+      }
+      var ret = getClsFromDecls(file.cls_decls, _super_names) +
+             getClsFromDecls(file.mixin_decls, _super_names);
+      _super_names.addAll(target_names);
+      return ret;
+   }
+   
+   static List<ClassifiedDeclParser>
+   getClsFromDecls(List<ClassifiedDeclParser> cls_decls, List<String> remained_supers) {
+      var ret = <ClassifiedDeclParser>[];
+      if (cls_decls == null) return ret;
+      var target_names = remained_supers.where((name) => name.contains('.')).toList();
+      // temporary remove and added back later on.
+      for (var i = 0; i < target_names.length; ++i) {
+        var target_name = target_names[i];
+         remained_supers.remove(target_name);
+      }
+      for (var j = 0; j < cls_decls.length; ++j) {
+         var cls = cls_decls[j];
+         for (var k = 0; k < remained_supers.length; ++k) {
+            var super_name = remained_supers[k];
+            if (super_name.endsWith(cls.name.name)){
+               ret.add(cls);
+               remained_supers.remove(super_name);
+               if (remained_supers.length == 0)
+                  return ret;
+            }
+         }
+      }
+      remained_supers.addAll(target_names);
+      return ret;
+   }
    
    String                     file_path;
    List<TopFuncDeclParser>    func_decls;
    List<TopVarDeclParser>     var_decls;
-   List<ClassDeclParser>      cls_decls;
-   List<TypeAlias> def_decls;
+   List<ClassifiedDeclParser> cls_decls;
+   List<ClassifiedDeclParser> mixin_decls;
+   List<TypeAlias>            def_decls;
    List<EnumDeclarationImpl>  enum_decls;
-   List<String>               exported_references;
+   List<ImportOrExportParser> imp_divs;
+   List<ImportOrExportParser> exp_divs;
    
-   List<ImportParser>         imp_divs;
+   List<ImportParser>         part_divs;
+   List<PartOfDirectiveImpl>  partof_divs;
    LibraryDirectiveImpl       lib;
    Iterable<SyntacticEntity>  members;
    CompilationUnitImpl        origin;
    
+   List<String>
+   get exported_references{
+      var vars    = var_decls?.fold<List<String>>([], (initial, d) => initial + d.variables.map((v) => v.name.name).toList()) ?? [];
+      var enums   = enum_decls?.map((e) => e.name.name)?.toList() ?? [];
+      var classes = cls_decls?.map((c) => c.name.name)?.toList() ?? [];
+      var funcs   = func_decls?.map((f) => f.name.name)?.toList() ?? [];
+      var defs    = def_decls?.map((d) => d.name.name)?.toList() ?? [];
+      return vars + enums + classes + funcs + defs;
+   }
+
    String get file_dir =>
       Path.dirname(file_path);
    
    String get file_name =>
       Path.basename(file_path);
+   
+   
    
    DartFileParser
    getImportFileByClsName(String name){
@@ -1775,11 +2053,15 @@ class DartFileParser extends PrintableDelegation with SearchableNodes {
       var_decls = file.var_decls;
       cls_decls = file.cls_decls;
       def_decls = file.def_decls;
+      mixin_decls = file.mixin_decls;
       enum_decls = file.enum_decls;
-      exported_references = file.exported_references;
       imp_divs = file.imp_divs;
+      exp_divs = file.exp_divs;
+      part_divs = file.part_divs;
+      partof_divs = file.partof_divs;
       lib = file.lib;
       members = file.members;
+ 
    }
    
    DartFileParser.init(CompilationUnitImpl code, String file_path, Uri uri) {
@@ -1789,6 +2071,7 @@ class DartFileParser extends PrintableDelegation with SearchableNodes {
       code      ??= parseCompilationUnit(File(file_path).readAsStringSync(), parseFunctionBodies: true);
       origin = code;
       this.file_path = file_path;
+      
       code.childEntities.forEach((syn) {
          if (syn is FunctionDeclarationImpl) {
             func_decls ??= [];
@@ -1804,28 +2087,33 @@ class DartFileParser extends PrintableDelegation with SearchableNodes {
          } else if (syn is ImportDirectiveImpl) {
             imp_divs ??= [];
             imp_divs.add(ImportParser(syn, this));
+         } else if (syn is ExportDirectiveImpl) {
+            exp_divs ??= [];
+            exp_divs.add(ExportParser(syn, this));
          } else if (syn is GenericTypeAliasImpl || syn is FunctionTypeAliasImpl) {
             def_decls ??= [];
             def_decls.add(syn);
          } else if (syn is EnumDeclarationImpl) {
             enum_decls ??= [];
             enum_decls.add(syn);
+         } else if (syn is PartDirectiveImpl){
+            part_divs ??= [];
+            var imp = ImportParser.partDivToImportDiv(syn);
+            part_divs.add(ImportParser(imp, this));
+         } else if (syn is PartOfDirectiveImpl){
+            partof_divs ??= [];
+            partof_divs.add(syn);
+         } else if (syn is MixinDeclarationImpl){
+            mixin_decls ??= [];
+            mixin_decls.add(MixinDeclParser(syn, this));
          } else {
             throw Exception(
-               'Uncaught exception, encountered unexpected runtimeType during '
-               'initializing TopDeclParser. Unexpected Type:${syn.runtimeType}'
+               '\nUncaught exception, encountered unexpected runtimeType:'
+               '${syn.runtimeType} during initializing TopDeclParser'
             );
          }
       });
       members   = code.childEntities;
-      
-      var vars    = var_decls?.fold<List<String>>([], (initial, d) => initial + d.variables.map((v) => v.name.name).toList()) ?? [];
-      var enums   = enum_decls?.map((e) => e.name.name)?.toList() ?? [];
-      var classes = cls_decls?.map((c) => c.name.name)?.toList() ?? [];
-      var funcs   = func_decls?.map((f) => f.name.name)?.toList() ?? [];
-      var defs    = def_decls?.map((d) => d.name.name)?.toList() ?? [];
-      exported_references = vars + enums + classes + funcs + defs;
-      
       delegate['var_decls']  = var_decls;
       delegate['cls_decls']  = cls_decls;
       delegate['def_decls']  = def_decls;
@@ -1836,17 +2124,7 @@ class DartFileParser extends PrintableDelegation with SearchableNodes {
       delegate['file_path']  = file_path;
    }
    
-   static DartFileParser
-   openSync(File file) {
-      return DartFileParser(code: parseCompilationUnit(file.readAsStringSync()), uri: file.uri);
-   }
    
-   static Future<DartFileParser>
-   open(File file) {
-      return file.readAsString().then((str) {
-         return DartFileParser(code: parseCompilationUnit(str), uri: file.uri);
-      });
-   }
 }
 
 

@@ -16,7 +16,6 @@ import 'package:analyzer/src/dart/ast/ast.dart';
 import 'package:common/src/common.log.dart' show Logger, ELevel;
 import 'package:common/src/common.dart' show FN;
 
-final _log = Logger(name: "io.glob", levels: [ELevel.critical, ELevel.error, ELevel.warning, ELevel.debug]);
 
 
 
@@ -48,10 +47,7 @@ class MethodBodyVisitor extends BaseAstVisitor {
    ];
 
    factory MethodBodyVisitor({List entries = MethodBodyVisitor.default_entries}) {
-      var ret = MethodBodyVisitor(entries: entries);
-      MethodBodyVisitor.default_entries.forEach((e) {
-      
-      });
+      return MethodBodyVisitor(entries: entries);
    }
    
    @override
