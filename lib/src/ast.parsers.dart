@@ -16,6 +16,7 @@ import 'package:astMacro/src/ast.codegen.dart';
 import 'package:common/src/common.dart' as _;
 
 import 'package:astMacro/src/ast.utils.dart';
+import 'package:astMacro/src/package_resolver.dart';
 import 'package:IO/src/io.dart' as io;
 
 import 'package:common/src/common.log.dart' show Logger, ELevel;
@@ -1642,19 +1643,10 @@ class TopFuncDeclParser extends BaseDeclParser<FunctionDeclarationImpl, Compilat
 
 mixin ImportOrExportParser on PrintableDelegation, SearchableNodes {
    static Map<String, ImportOrExportParser> cache = {};
-   static Map<String, String> package_cfg = _.Dict<String, String>(
-      File(io.Path.rectifyPath(Platform.packageConfig))
-         .readAsStringSync().trim().split('\n')
-         .map((line){
-            var package_name = line.substring(0, line.indexOf(':'));
-            var package_path = line.substring(package_name.length + 1);
-            return MapEntry(package_name, package_path);
-         }
-      ).toList()
-   );
+   
    DartFileParser host_parser;
    DartFileParser _content_parser;
-
+   PackageResolver pkg_resolver;
    List<SimpleIdentifierImpl> shows;
    DeclaredSimpleIdentifier   decl_as;
    ImportDirectiveImpl        _import_origin;
@@ -1697,7 +1689,7 @@ mixin ImportOrExportParser on PrintableDelegation, SearchableNodes {
       return _content_parser;
    }
    
-   bool isFilePath(String path){
+  /* bool isFilePath(String path){
       var lib_ptn = RegExp('[a-zA-Z_]+[:]');
       return !path.startsWith(lib_ptn);
    }
@@ -1705,7 +1697,7 @@ mixin ImportOrExportParser on PrintableDelegation, SearchableNodes {
    bool isBuildinPath(String path){
       var buildin_path = RegExp('dart:');
       return path.startsWith(buildin_path);
-   }
+   }*/
    
    /*
    
@@ -1748,7 +1740,8 @@ mixin ImportOrExportParser on PrintableDelegation, SearchableNodes {
    
    @nullable String
    _getImportPath(String import_path){
-      if (isBuildinPath(import_path)) return null;
+      return pkg_resolver.getRealPathFromImport(import_path, host_parser.file_path);
+      /*if (isBuildinPath(import_path)) return null;
       if (isFilePath(import_path)){
          return io.Path.join(
             io.Path.dirname(host_parser.file_path) ,
@@ -1771,7 +1764,7 @@ mixin ImportOrExportParser on PrintableDelegation, SearchableNodes {
             return io.Path.join(package_cfg[package_name], package_paths[1]);
          return io.Path.join(package_cfg[package_name], '${package_paths[0]}.dart');
          //return io.Path.rectifyPath(package_cfg[package_name]);
-      }
+      }*/
    }
    
    @nullable File
@@ -1785,7 +1778,10 @@ mixin ImportOrExportParser on PrintableDelegation, SearchableNodes {
          file =  File(path);
          file.exists().then((is_exist){
             if (!is_exist)
-               throw Exception("cannot get imported file by path: $path");
+               throw Exception(
+                  "cannot get imported file by import_path: $import_path\n"
+                  "since file_path: $path did not exists"
+               );
          }, onError: (obj, stacktrace){
             print('import clause: $import_path');
             print('file path: $path');
@@ -1795,6 +1791,7 @@ mixin ImportOrExportParser on PrintableDelegation, SearchableNodes {
    }
    
    _init(NamespaceDirectiveImpl node){
+      pkg_resolver = PackageResolver();
       if (node is ImportDirectiveImpl)       _import_origin  = node;
       else if (node is ExportDirectiveImpl)  _export_origin  = node;
       else                                   throw Exception('Uncaught Exception');

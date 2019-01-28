@@ -17,9 +17,9 @@ import 'package:analyzer/src/dart/ast/ast.dart';
 import 'package:astMacro/src/ast.parsers.dart';
 import 'package:astMacro/src/ast.transformers.dart';
 import 'package:astMacro/src/ast.utils.dart';
-import 'package:common/src/common.dart';
+import 'package:common/src/common.dart' as _;
 import 'package:test/test.dart';
-import 'package:IO/src/io.dart' show getScriptPath, Path;
+import 'package:IO/src/io.dart' as io;
 
 
 typedef TVoid = void Function();
@@ -41,7 +41,7 @@ getClassMembers<T extends ClassMember>(ClassDeclarationImpl node) {
 }
 
 TestCase_astParserFileParserTest(){
-   var file_path = Path.join( getScriptPath(Platform.script) , 'sampleCode.dart');
+   var file_path = io.Path.join( io.getScriptPath(Platform.script) , 'sampleCode.dart');
    print('file_path: $file_path');
    var file_string = File(file_path).readAsStringSync();
    var code = parseCompilationUnit(file_string);
@@ -57,7 +57,8 @@ TestCase_astParserFileParserTest(){
          F1 = 'C:\\Users\\gordianknot\\AppData\\Roaming\\Pub\\Cache\\hosted\\pub.dartlang.org\\colorize-2.0.0\\lib\\colorize.dart',
          F2 = 'C:\\Users\\gordianknot\\AppData\\Roaming\\Pub\\Cache\\hosted\\pub.dartlang.org\\io-0.3.3\\lib\\io.dart',
          F3 = 'C:\\Users\\gordianknot\\AppData\\Roaming\\Pub\\Cache\\hosted\\pub.dartlang.org\\js-0.6.1+1\\lib\\js.dart';
-   
+      
+      
       test('check import string literal path', (){
          expect(import_parsers[0].path, P1);
          expect(import_parsers[1].path, P2);
@@ -98,7 +99,7 @@ TestCase_astParserFileParserTest(){
    
       test('get file content of colorize from importParser', (){
          var c = import_parsers[0].content;
-         var expected = ignoreWhiteSpace("""
+         var expected = _.ignoreWhiteSpace("""
             library colorize;
             
             part "src/styles.dart";
@@ -106,7 +107,7 @@ TestCase_astParserFileParserTest(){
             part "src/color.dart";
             """);
          print(c);
-         expect(ignoreWhiteSpace(c), expected);
+         expect(_.ignoreWhiteSpace(c), expected);
       });
 
       test('preFilterReference in colorize import clause', (){
@@ -688,11 +689,11 @@ TestCase_astParserTest() {
          ]));
       });*/
       test('validating assinment references fetched via enRefsUpDown', (){
-         var refs_asn_excluded = <Tuple<AstNode, List<SimpleIdentifierImpl>>>[];
+         var refs_asn_excluded = <_.Tuple<AstNode, List<SimpleIdentifierImpl>>>[];
          var overrides         = <String>[];
-         var assinments        = <Tuple<AstNode,
-            List<Tuple<AstNode, List<SimpleIdentifierImpl>>>>>[];
-         var cache      = <Object, List<Tuple<AstNode, List<SimpleIdentifierImpl>>>>{};
+         var assinments        = <_.Tuple<AstNode,
+            List<_.Tuple<AstNode, List<SimpleIdentifierImpl>>>>>[];
+         var cache      = <Object, List<_.Tuple<AstNode, List<SimpleIdentifierImpl>>>>{};
          Refs.genRefsUpDown(method.origin.body, refs_asn_excluded, overrides, assinments, cache);
          var result = assinments.map((r) => [r.key.toString(), r.value.toString()]).toList();
          expect(result, equals([
@@ -757,11 +758,11 @@ TestCase_astParserTest() {
       });
       
       test('validating references fetched via genRefsUpDown', (){
-         var refs_asn_excluded = <Tuple<AstNode, List<SimpleIdentifierImpl>>>[];
+         var refs_asn_excluded = <_.Tuple<AstNode, List<SimpleIdentifierImpl>>>[];
          var overrides         = <String>[];
-         var assinments        = <Tuple<AstNode,
-            List<Tuple<AstNode, List<SimpleIdentifierImpl>>>>>[];
-         var cache      = <Object, List<Tuple<AstNode, List<SimpleIdentifierImpl>>>>{};
+         var assinments        = <_.Tuple<AstNode,
+            List<_.Tuple<AstNode, List<SimpleIdentifierImpl>>>>>[];
+         var cache      = <Object, List<_.Tuple<AstNode, List<SimpleIdentifierImpl>>>>{};
    
          Refs.genRefsUpDown(method.origin.body, refs_asn_excluded, overrides, assinments, cache);
          var result = refs_asn_excluded.map((r) => [r.key.toString(), r.value.toString()]).toList();
