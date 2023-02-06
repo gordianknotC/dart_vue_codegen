@@ -1,0 +1,229 @@
+//@formatter:off
+import 'dart:async';
+import 'mocha.definition.dart';
+import '../chai/chai.dart'          show chai, Assert, expect;
+import '../../common/util.dart'     show WatchDom_OnChange, notify, TNotifyOpt;
+import '../../common/window.dart'   show Promise, qs, qsAll, win, jsGet, jsSet, jsCall, console, setTimeout;
+import 'dart:html'                  show ElementList, Element, HtmlDocument;
+
+const String NOTIFY_TAG = 'MOCHA_TEST';
+const String BEHAVIOR   = 'bdd';
+const int    TIMEOUT    = 10000;
+const String MOCHA_PNG  = '../../src/assets/mocha.png';
+const String TEST_URL   = 'localhost:8080/tests/';
+//@formatter:on
+
+Future<void> wait(int time, int div) async {
+   var delay = Duration(microseconds: (time / div) as int);
+   return Future.delayed(delay).then((_) {
+      return;
+   });
+}
+
+void Function(Done done) mochaAsync(TestBody fn) {
+   return (Done done) {
+      fn.call().then(done, (err) {
+         return done(err);
+      });
+   };
+}
+
+String currentUrl() => win.location.toString();
+
+ElementList getSuites([dynamic base]) {
+   return qsAll('li.suite', base);
+}
+
+ElementList getTests([dynamic base]) {
+   return qsAll('li.test', base);
+}
+
+void hidePassedSuites([bool keepRoot = false]) {
+   var titles = getSuites();
+   titles.forEach((Element title) {
+      var tests = getTests(title);
+      if (tests.every((test) => test.classes.contains('pass'))) {
+         if (keepRoot == true) {
+            tests.forEach((test) {
+               if (test.classes.contains('pass'))
+                  test.style.display = 'none';
+            });
+         } else {
+            title.style.display = 'none';
+         }
+      }
+   });
+}
+
+class Name {
+   final String name;
+   
+   const Name({this.name});
+}
+
+@Name(name: 'MochaHelper')
+class MH {
+   static Element _stats = null;
+   static void Function(num failures) origin_run = null;
+   
+   static restoreCurrentResult() {
+      Element prevReport = qs('section#prevTestReport');
+      Element section = win.document.createElement('section');
+      Element _section, scopeInfo;
+      if (prevReport != null) {
+         _section = win.document.createElement('section');
+         _section.setAttribute('id', 'prevTestReport');
+         qs('#mocha-report').parent.append(_section);
+         prevReport = _section;
+      }
+      scopeInfo = qs("section[data-url=$win.location.toString()]", prevReport);
+      if (scopeInfo != null) {
+         section = scopeInfo;
+      } else {
+         section.setAttribute('data-url', win.location.toString());
+      }
+      prevReport.append(section);
+      section.innerHtml = qs('#mocha-report').innerHtml;
+   }
+   
+   //   static nextTest() {
+   //      if (MH.urls.length > MH.currentFlag + 1) {
+   //         MH.restoreCurrentResult()
+   //         MH.currentFlag += 1
+   //         window.location.replace(MH.urls[MH.currentFlag])
+   //      }
+   //   }
+   //
+   //   static addTestUrls(urls) {
+   //      if (Array.isArray(urls)) {
+   //         MH.urls.concat(urls)
+   //      } else {
+   //         MH.urls.push(urls)
+   //      }
+   //   }
+   
+   static Element stats() {
+      if (MH._stats != null) return MH._stats;
+      MH._stats = qs('#mocha-stats');
+      if (MH._stats == null)
+         throw new Exception('borswer not ready, try again later.');
+      return MH._stats;
+   }
+   
+   //TODO: ....
+   static init(m) {
+//      if (MH.origin_run != null) return;
+//      MH.origin_run = jsCall(mocha.run, 'bind', [mocha]);
+//      mocha.run = MH.run;
+   }
+   
+   static cloneStats() {
+      Element stats = MH.stats();
+      Element copied_stats = stats.clone(true);
+      copied_stats.innerHtml = stats.innerHtml;
+      copied_stats.style.visibility = 'hidden';
+      copied_stats.style.position = 'relative';
+      stats.insertAdjacentElement('afterend', copied_stats);
+   }
+   
+   static showGrepInfo() {
+      Element stats = MH.stats();
+      String search = win.location.search;
+      Element heading = stats.querySelector('h4');
+      if (search?.substring(0, '?grep'.length) == '?grep') {
+         var scopeInfo = heading != null
+            ? heading
+            : win.document.createElement('h4');
+         
+         scopeInfo.text = "scope:$Uri.decodeComponent(search.split('=')[1])";
+         if (heading != null)
+            //jsCall(stats, 'prepend', [scopeInfo]);
+            stats.parent.insertAdjacentElement('beforebegin', scopeInfo);
+      }
+   }
+   
+   static onTest(Test test) {
+   }
+   
+   static onTestEnd(Test test) {
+   }
+   
+   static onTestPassed(Test test) {
+      ElementList suites, topSuites;
+      int passed = test.parent.tests
+         .where((t) => t.state == 'passed')
+         .length;
+      if (passed == test.parent.tests.length) {
+         topSuites = List.from(qsAll('#mocha-report > li.suite:not(.hide)'));
+         suites = List.from(qsAll('#mocha-report li.suite:not(.hide)'))
+            .where((el) => !topSuites.contains(el));
+         if (suites.length > 0)
+            suites[suites.length - 1].classes.add('hide');
+      }
+   }
+   
+   static onTestFailed(Test test) {
+      notify(
+         title: 'Some Error Occurred',
+         option: TNotifyOpt(
+            tag: NOTIFY_TAG,
+            body: test.err.stackTrace.toString(),
+            icon: MOCHA_PNG,
+            start_url: currentUrl(),
+         ),
+         blockReplicate: true
+      );
+      var errors = qsAll('li.test.fail > pre.error');
+      var reg = RegExp(r'/[\n ]at/');
+      errors[errors.length - 1].text = test.err.stackTrace.toString().split(reg)[0];
+      console.error("Mocha Test:\n", test.err.stackTrace.toString());
+   }
+   
+   static onTestsCompleted() {
+   }
+   
+   static onReportChanged() {
+      ElementList passedElts = qsAll('#mocha-report > li.suite li.pass:not(.hide)');
+      passedElts.forEach((elt) {
+         Timer(Duration(microseconds: 600), () {
+            elt.classes.add('hide');
+         });
+      });
+   }
+   
+   static clearMocha() {
+      MH._stats = null;
+      qsAll('#mocha-report').forEach((li) => li.remove());
+      qsAll('#mocha-stats').forEach((li) => li.remove());
+   }
+
+//TODO: ....
+//   Runner static run({time, hidePass} = {time: 300, hidePass: false}) {
+//      let instance
+//      let passes = []
+//      MH.clearMocha()
+//      setTimeout(() => {
+//      instance = MH.mocha_run()
+//      MH.showGrepInfo()
+//      MH.cloneStats()
+//      instance
+//         .on('test', MH.onTest)
+//         .on('test end', MH.onTestEnd)
+//         .on('pass', MH.onTestPassed)
+//         .on('fail', MH.onTestFailed)
+//         .on('end', MH.onTestsCompleted);
+//      watchDOM_OnChanged(document.querySelector('#mocha-report'), MH.onReportChanged)
+//      }, time)
+//   }
+
+}
+
+
+
+
+
+
+
+
+
+

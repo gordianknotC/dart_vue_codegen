@@ -3,9 +3,6 @@ import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/syntactic_entity.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:colorize/colorize.dart';
-/*import 'package:front_end/src/scanner/token.dart'
-   show BeginToken, KeywordToken, SimpleToken, StringToken;*/
-
 
 /*var _AST_STRUCT = {
    *//*
@@ -60,7 +57,7 @@ import 'package:colorize/colorize.dart';
    NamedExpressionImpl: [
       LabelImpl,
       SimpleStringLiteralImpl,
-      MapLiteralImpl,
+      SetOrMapLiteralImpl,
       PrefixedIdentifierImpl,
       BooleanLiteralImpl,
       ListLiteralImpl
@@ -147,7 +144,7 @@ import 'package:colorize/colorize.dart';
       SimpleFormalParameterImpl,
       FieldFormalParameterImpl,
       SimpleToken,
-      MapLiteralImpl,
+      SetOrMapLiteralImpl,
       SimpleIdentifierImpl,
       PrefixedIdentifierImpl,
       IntegerLiteralImpl,
@@ -225,7 +222,7 @@ import 'package:colorize/colorize.dart';
    TypeParameterImpl: [
       DeclaredSimpleIdentifier
    ],
-   MapLiteralImpl: [
+   SetOrMapLiteralImpl: [
       KeywordToken,
       BeginToken,
       SimpleToken,

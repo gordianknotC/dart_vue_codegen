@@ -9,17 +9,6 @@ import 'package:common/src/common.dart';
 
 typedef TVoid = void Function();
 
-/*import 'package:analyzer/dart/ast/ast_factory.dart';
-import 'package:analyzer/dart/ast/standard_ast_factory.dart';
-import 'package:analyzer/dart/ast/syntactic_entity.dart';
-import 'package:analyzer/dart/ast/token.dart';
-import 'package:analyzer/dart/ast/visitor.dart';
-
-import 'package:colorize/colorize.dart'           show color, Colorize, Styles;
-import 'package:front_end/src/scanner/token.dart' show KeywordToken, SimpleToken, StringToken;
-import 'package:path/path.dart'                   show join, dirname;
-import 'package:quiver/collection.dart'           show DelegatingMap;
-*/
 
 
 Iterable<ClassDeclarationImpl>

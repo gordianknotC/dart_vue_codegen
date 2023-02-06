@@ -5,16 +5,6 @@ import 'package:astMacro/src/ast.transformers.dart';
 import 'package:test/test.dart';
 import 'package:path/path.dart' show join;
 
-/*import 'package:analyzer/dart/ast/token.dart';
-import 'package:analyzer/dart/ast/ast_factory.dart';
-import 'package:analyzer/dart/ast/syntactic_entity.dart';
-import 'package:analyzer/dart/ast/standard_ast_factory.dart';
-import 'package:analyzer/dart/ast/visitor.dart';
-import 'package:analyzer/src/dart/ast/ast.dart';
-import 'package:quiver/collection.dart' show DelegatingMap;
-import 'package:front_end/src/scanner/token.dart' show KeywordToken, SimpleToken, StringToken;
-import 'package:colorize/colorize.dart' show color, Colorize, Styles;*/
-
 import 'package:astMacro/src/ast.utils.dart';
 import 'package:astMacro/src/ast.dart';
 

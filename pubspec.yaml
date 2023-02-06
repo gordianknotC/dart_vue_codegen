@@ -1,20 +1,47 @@
-name: astMacro
+name: vue_codegen
+publish_to: none
+repository: https://github.com/gordianknotC/dart_vue_codegen.git
 description: A starting point for Dart libraries or applications.
 # version: 1.0.0
 # homepage: https://www.example.com
 # author: gordianknot <email@example.com>
 
 environment:
-  sdk: '>=2.1.0 <3.0.0'
+  sdk: '>=2.5.0 <3.0.0'
 
 dependencies:
-  petitparser: ^2.0.2    #PetitParser for Dart
-  quiver: ^2.0.0+1  #collection utilities
-  yaml: ^2.1.15   #yaml
-  colorize: ^2.0.0    #support colorizing console color
-  IO:
-    path: ../IO
-  common:
-    path: ../common
+  dart_io:
+    git:
+      url: https://github.com/gordianknotC/dart_io.git
+      refs: HEAD
+  dart_common:
+    git:
+      url: https://github.com/gordianknotC/dart_common.git
+      refs: HEAD
+  analyzer    : ^0.39.2+1
+  html        : ^0.14.0+3
+  petitparser : ^2.4.0    #PetitParser for Dart
+  html_builder: ^1.0.5    #html DSL builder
+  quiver      : ^2.0.0+1  #collection utilities
+  path        : ^1.6.2    #file system path
+  yaml        : ^2.1.15   #yaml
+  archive     : ^2.0.4    #compression utility
+  tripledes   : ^2.1.0    #encryption / decryption
+  http_server : ^0.9.8    #simple http server
+  colorize    : ^3.0.0    #support colorizing console color
+  rpc         : ^0.6.0    #rpc service via annotation
+
+  ### following dependencies grabbed from VueDart  ###
+  sass        : ^1.8.0
+  sass_builder: ^2.1.3
+  source_maps : ^0.10.6
+  source_span : ^1.4.0
+  uuid        : any
+  build       : any
+  csslib      : any
+
+  ### js interopt                                 ###
+  func2       : ^2.0.0    #handy typedefs
+
 dev_dependencies:
-  test: ^1.0.0
+  test: ^1.3.4

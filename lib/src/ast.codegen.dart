@@ -10,16 +10,14 @@ import 'package:analyzer/dart/ast/standard_ast_factory.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/syntactic_entity.dart';
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:front_end/src/scanner/token.dart'
-   show BeginToken, CommentToken, KeywordToken, SimpleToken, StringToken;
+import 'package:dart_common/dart_common.dart' show FN, Tuple, guard;
 import 'package:meta/meta.dart';
 import 'package:quiver/collection.dart' show DelegatingMap;
 import 'package:analyzer/src/dart/ast/ast.dart';
 
 import 'package:astMacro/src/ast.parsers.dart';
 import 'package:astMacro/src/ast.utils.dart';
-import 'package:common/src/common.log.dart' show Logger, ELevel;
-import 'package:common/src/common.dart' show FN, Tuple, guard, IS;
+import 'common.log.dart';
 
 final _log = Logger(name: "ast.codgen", levels: [ELevel.critical, ELevel.error, ELevel.warning ]);
 
@@ -81,7 +79,7 @@ class UnsupportedArgumentsException implements Exception {
    final List<String> supported;
    final dynamic provided;
    
-   UnsupportedArgumentsException({this.supported, this.provided});
+   UnsupportedArgumentsException({required this.supported, this.provided});
    
    String toString() {
       return 'Invalid type of arguemtns, only support for $supported, you provide:${provided.runtimeType}';
@@ -93,19 +91,19 @@ class TAstInfer {
    String output;
    AstNode node;
    
-   TAstInfer({this.output, this.node});
+   TAstInfer({required this.output, required this.node});
 }
 
 class TArg {
    TType   arg_typ ;
    String  arg_name;
    dynamic arg_value;
-   bool    position_optional;
-   bool    named_optional;
-   int     offset;
+   bool?    position_optional;
+   bool?    named_optional;
+   int?     offset;
    
-   TArg({this.arg_typ, this.arg_name, this.position_optional,
-         this.named_optional, this.offset, this.arg_value}){
+   TArg({required this.arg_typ, required this.arg_name, this.position_optional,
+      this.named_optional, this.offset, this.arg_value}){
       if(arg_value != null){
          if (position_optional != true && named_optional != true)
             position_optional = true;
@@ -114,12 +112,12 @@ class TArg {
 }
 
 class TArgList {
-   List<TArg> list;
-   int optional_offset_l;
-   int optional_offset_r;
+   late List<TArg> list;
+   late int optional_offset_l;
+   late int optional_offset_r;
    
-   TArgList([this.list]){
-      this.list ??= [];
+   TArgList([List<TArg>? list]){
+      this.list = list ?? [];
       init();
    }
    
@@ -153,22 +151,22 @@ class TArgList {
 
 */
 class TType<E>  {
-   TypeNameImpl                     named_type;             // List<String>
+   TypeNameImpl?                     named_type;             // List<String>
    //TypeParameterListImpl            clause_type;            // <E extends String>
-   GenericFunctionTypeImpl          generic_functype;       // bool Function<String> (int a, int b)
-   FunctionTypedFormalParameterImpl param_functype;         // bool condition(a, b)
+   GenericFunctionTypeImpl?          generic_functype;       // bool Function<String> (int a, int b)
+   FunctionTypedFormalParameterImpl? param_functype;         // bool condition(a, b)
    
    /*
          String, int, bool ,TestCase...
    */
-   TType_namedTypeInit({String name, List<String> namedType_params}){
+   TType_namedTypeInit({required String name, List<String>? namedType_params}){
          named_type = astNamedType(name, namedType_params);
    }
    /*
          void Function(String a, int b)
    */
-   TType_genericFuncTypeInit({List<Tuple<String, String>> funcType_params ,
-                              TArgList arguments, TType func_retType}){
+   TType_genericFuncTypeInit({required List<Tuple<String, String>> funcType_params ,
+      required TArgList arguments, required TType func_retType}){
       generic_functype = astGenericTypeFunc(
          funcType_params: funcType_params ,
          arguments      : arguments, func_retType   : func_retType
@@ -177,8 +175,8 @@ class TType<E>  {
    /*
          bool condition(a, b, c, ...)
    */
-   TType_formalParamInit({String func_name,   List<Tuple<String, String>> funcType_params,
-                          TArgList arguments, TType func_retType}){
+   TType_formalParamInit({required String func_name,   required List<Tuple<String, String>> funcType_params,
+      required TArgList arguments, required TType func_retType}){
       param_functype = astInlineParamTypeFunc(
          func_name,
          funcType_params : funcType_params,
@@ -189,8 +187,8 @@ class TType<E>  {
    /*
          main constructor
    */
-   TType({String name, List<String> namedType_params, String func_name,
-          List<Tuple<String, String>> funcType_params, TArgList arguments, TType func_retType}){
+   TType({String? name, List<String>? namedType_params, String? func_name,
+          List<Tuple<String, String>>? funcType_params, TArgList? arguments, TType? func_retType}){
       var is_all_args_null  = ((name ?? namedType_params ?? func_name ?? funcType_params ?? arguments ?? func_retType) == null);
       var is_named_type     = name != null || is_all_args_null;
       var is_unset_funcname_Or_kw_function       = (func_name == 'Function' || func_name == null);
@@ -205,15 +203,15 @@ class TType<E>  {
          throw Exception('Obscure usage');
       
       if (is_named_type){
-         TType_namedTypeInit(name: name, namedType_params: namedType_params);
+         TType_namedTypeInit(name: name!, namedType_params: namedType_params!);
          if (func_name != null || funcType_params != null || arguments != null)
             throw Exception('Obscure usage');
       }else{
          func_name ??= 'Function';
          if (is_generic_type )
-            TType_genericFuncTypeInit(funcType_params: funcType_params, arguments: arguments, func_retType: func_retType);
+            TType_genericFuncTypeInit(funcType_params: funcType_params!, arguments: arguments!, func_retType: func_retType!);
          else if (is_inline_type)
-            TType_formalParamInit(func_name: func_name, funcType_params: funcType_params, arguments: arguments, func_retType: func_retType);
+            TType_formalParamInit(func_name: func_name, funcType_params: funcType_params!, arguments: arguments!, func_retType: func_retType!);
          else
             (){}; // pass
       }
@@ -222,12 +220,12 @@ class TType<E>  {
       guard((){
          if (namedOrFuncParser is FuncTypeParser){
             var func_retType = TType.astNodeInit(namedOrFuncParser.retType);
-               var funcType_params = namedOrFuncParser.type_params?.typeParameters?.map((t) => Tuple(t.name.name))?.toList();
+               var funcType_params = namedOrFuncParser.type_params.typeParameters?.map((t) => Tuple(t.name.name, ""))?.toList();
                var arguments = namedOrFuncParser.arguments.length > 0
                    ?  TArgList(namedOrFuncParser.arguments.parameters.map(
                         (p) => TArg(
                            arg_typ: TType.astNodeInit(p as FormalParameterImpl),
-                           arg_name: p.declaredElement?.name
+                           arg_name: p.declaredElement.name
                         )
                       ).toList())
                    :  null;
@@ -235,28 +233,29 @@ class TType<E>  {
             if (namedOrFuncParser.ident.name == 'Function'){
                //generic Formal func
                TType_genericFuncTypeInit(
-                  funcType_params: funcType_params,
-                  arguments      : arguments      , func_retType: func_retType
+                  funcType_params: funcType_params!,
+                  arguments      : arguments!      ,
+                   func_retType: func_retType
                );
             }else{
                // inline formal func
                var func_name = namedOrFuncParser.ident.name;
                TType_formalParamInit(
-                  func_name: func_name, funcType_params: funcType_params,
-                  arguments: arguments, func_retType   : func_retType
+                  func_name: func_name, funcType_params: funcType_params!,
+                  arguments: arguments!, func_retType   : func_retType
                );
             }
          } else if (namedOrFuncParser is TypeNameParser){
             var name = namedOrFuncParser.typename.name;
-            var namedType_params = namedOrFuncParser.typeargs?.arguments?.map((arg) => arg.toString());
-            TType_namedTypeInit(name: name, namedType_params: namedType_params);
+            var namedType_params = namedOrFuncParser.typeargs.arguments?.map((arg) => arg.toString()).toList();
+            TType_namedTypeInit(name: name, namedType_params: namedType_params!);
          } else if (namedOrFuncParser is TypeNameImpl){
             var name = namedOrFuncParser.name.name;
             var namedType_params =
                namedOrFuncParser.typeArguments?.arguments?.map((x) => x.type?.name)
                   ?.where((x) => x!=null)
-                  ?.toList();
-            TType_namedTypeInit(name: name, namedType_params: namedType_params);
+                  .toList();
+            TType_namedTypeInit(name: name, namedType_params: namedType_params!);
          } else if (namedOrFuncParser is SimpleFormalParameterImpl) {
             var name = namedOrFuncParser.type.toSource();
             TType.namedType(
@@ -264,10 +263,10 @@ class TType<E>  {
             );
          } else if (namedOrFuncParser is FormalParameterImpl) {
             var name = namedOrFuncParser.declaredElement.type.name;
-            var namedType_params = namedOrFuncParser.declaredElement.typeParameters?.map((x) => x.name)?.toList();
+            var namedType_params = namedOrFuncParser.declaredElement.typeParameters?.map((x) => x.name).toList();
             TType.namedType(
                name: name,
-               namedType_params: namedType_params
+               namedType_params: namedType_params!
             );
          } else if (namedOrFuncParser is MethodsParser){
             TType.astNodeInit(
@@ -291,18 +290,19 @@ class TType<E>  {
       
    }
    
-   TType.namedType({String name, List<String> namedType_params}){
+   TType.namedType({required String name, List<String>? namedType_params}){
       TType_namedTypeInit(name: name, namedType_params: namedType_params);
    }
    
-   TType.genericFuncType({String func_name, List<Tuple<String, String>> funcType_params,
-                          TArgList arguments, TType func_retType}){
+   TType.genericFuncType({required String func_name, required List<Tuple<String, String>> funcType_params,
+      required TArgList arguments, required TType func_retType}){
       TType_genericFuncTypeInit( funcType_params: funcType_params,
                                  arguments: arguments, func_retType: func_retType);
    }
    
-   TType.paramType({String func_name, List<Tuple<String, String>> funcType_params,
-                      TArgList arguments, TType func_retType}){
+   TType.paramType({required String func_name,
+      required List<Tuple<String, String>> funcType_params,
+      required TArgList arguments, required TType func_retType}){
       TType_formalParamInit(
          func_name: func_name, funcType_params: funcType_params,
          arguments: arguments, func_retType   : func_retType
@@ -1275,7 +1275,7 @@ astMapEntry(key, value) {
 }
 
 //pass:
-MapLiteralImpl
+SetOrMapLiteralImpl
 astMap(Map value) {
    var const_kw = null;
    var type_args = inferTypeArgs(value);
@@ -1285,7 +1285,7 @@ astMap(Map value) {
       .map((k, v) => MapEntry(k, v))
       .entries
       .toList();
-   return MapLiteralImpl(
+   return SetOrMapLiteralImpl(
       const_kw,
       type_args,
       left,
@@ -1386,7 +1386,7 @@ astPropAccs<PREFIX_OR_ACCS extends ExpressionImpl>(List<String> value) {
       String       :: astNamedType('String')
 */
 TypeNameImpl
-astNamedType(String name, [List<String> type_params]) {
+astNamedType(String name, [List<String>? type_params]) {
    var typename, typeargs ;
    typename = astIdent(name);
    typeargs = type_params != null

@@ -1,8 +1,13 @@
 analyzer:
-#   exclude:
-#     - path/to/excluded/files/**
+  # Lint rules and documentation, see http://dart-lang.github.io/linter/lints
+  exclude:
+    - lib/sampleCode.dart
+    - test/sampleCode.dart
+    - test/**
+    - test/*.*
+  language:
+    enableSuperMixins: true
 
-# Lint rules and documentation, see http://dart-lang.github.io/linter/lints
 linter:
   rules:
     - cancel_subscriptions
@@ -12,3 +17,7 @@ linter:
     - test_types_in_equals
     - unrelated_type_equality_checks
     - valid_regexps
+    - avoid_returning_null          # Avoid returning null from members whose return type is bool, double, int, or num.
+    - prefer_conditional_assignment # Prefer using ??= over testing for null.
+    - no_adjacent_strings_in_list
+    - avoid_null_checks_in_equality_operators # As null is a special type, no class can be equivalent to it. Use "is" "type" instead.

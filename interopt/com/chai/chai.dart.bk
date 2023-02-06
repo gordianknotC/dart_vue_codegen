@@ -1,0 +1,56 @@
+import 'dart:js_util' show getProperty, setProperty;
+import 'chai.definition.dart' as _;
+import '../../common/util.dart' show forEach;
+
+class _Chai {
+   _.ExpectStatic get expect => _.chai.expect;
+   _.AssertStatic get Assert => getProperty(_.chai, 'assert');
+   _.Config       get config => _.chai.config;
+   dynamic        get AssertionError => _.chai.AssertionError;
+   String         get version => _.chai.version;
+   _.Should should(){
+      _.chai.should();
+   }
+   _.ChaiStatic use(void fn(dynamic chai, dynamic utils)){
+      return _.chai.use(fn);
+   }
+}
+
+
+final _Chai chai   = () {
+   _Chai inst = _Chai();
+   final ast = inst.Assert;
+   setProperty(ast, 'theSame', (dynamic actual, dynamic expect, String message){
+      var command = actual is String
+            ? ast.equal
+            : actual is List
+               ? ast.sameMembers
+               : ast.deepEqual;
+      return command(actual, expect, message);
+   });
+   
+   setProperty(ast, 'almostTheSame', (dynamic actual, dynamic expect,num div, String message){
+      return actual is String
+         ? ast.equal(actual, expect, message)
+         : actual is List
+            ? (List actual, List expect, num div, String message) {
+                  forEach(actual, (x, [i]){
+                     ast.closeTo(x, expect[i], div, message);
+                  });
+               }
+            : ast.closeTo(actual, expect, div, message);
+   });
+   
+   setProperty(ast, 'within', (num value, num l , num r, String message){
+      var delta = (r - l) / 2;
+      var act   = value;
+      var exp   = l + delta;
+      ast.approximately(act, exp, delta);
+   });
+   
+   return inst;
+}();
+
+final _.AssertStatic Assert = chai.Assert;
+final _.ExpectStatic expect = chai.expect;
+

@@ -1,7 +1,6 @@
 import 'dart:io';
-
-import 'package:IO/src/io.dart' as io;
-import 'package:common/src/common.dart' as _;
+import 'package:dart_io/dart_io.dart' as io;
+import 'package:dart_common/dart_common.dart' as _;
 
 
 class Nullable {
@@ -15,6 +14,22 @@ class PackageResolver{
    
    factory PackageResolver({String cfg_path}){
       cfg_path ??= Platform.packageConfig;
+      if (cfg_path == null){
+         var current = io.getScriptPath(Platform.script);
+         var cfg = io.Path.join(current, '.packages');
+         var founded = File(cfg).existsSync();
+
+         _.raise(
+            ".packages config not found!\n"
+            "configs.keys: ${configs.keys}\n"
+            "try searching config: $cfg in current directory\n"
+            "config exists: $founded"
+         );
+         if (founded)
+            cfg_path = cfg;
+         else
+            throw Exception('.packages not found');
+      }
       cfg_path = io.Path.rectifyPath(cfg_path);
       if(configs.containsKey(cfg_path))
          return configs[cfg_path];

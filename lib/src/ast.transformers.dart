@@ -4,18 +4,13 @@ import 'package:analyzer/dart/ast/syntactic_entity.dart';
 import 'package:analyzer/dart/ast/standard_ast_factory.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
-import 'package:front_end/src/scanner/token.dart'
-   show BeginToken, CommentToken,  SimpleToken ;
+import 'package:dart_common/dart_common.dart';
 import 'package:quiver/collection.dart' show DelegatingMap;
 import 'package:analyzer/src/dart/ast/ast.dart';
 
 
-import 'package:common/src/common.dart' show FN;
-import 'package:common/src/common.log.dart' show Logger, ELevel;
 
-
-final _log = Logger(name: "io.glob", levels: [ELevel.critical, ELevel.error, ELevel.warning, ELevel.debug]);
-
+// final _log = Logger(name: "io.glob", levels: [ELevel.critical, ELevel.error, ELevel.warning, ELevel.debug]);
 
 
 /*
@@ -146,7 +141,7 @@ abstract class BaseTransformer extends RecursiveAstVisitor {
    
    static dynamic
    walkChildren(AstNode node, BoolFunc condition, VoidFunc action) {
-      node.childEntities.where((SyntacticEntity elt) {
+      node.childEntities.forEach((SyntacticEntity elt) {
          if (condition(elt)) {
             action(elt);
          }
@@ -155,7 +150,7 @@ abstract class BaseTransformer extends RecursiveAstVisitor {
    
    static List<Map<String, dynamic>>
    getParsedMeta(List<Annotation> metadata, List<String> matchedNames) {
-      List<Map<String, dynamic>> result;
+      List<Map<String, dynamic>>? result;
       List<Annotation> filtered = List.from(metadata
          .where((meta) =>
          matchedNames.contains(
@@ -165,13 +160,13 @@ abstract class BaseTransformer extends RecursiveAstVisitor {
       )
       );
       filtered.forEach((Annotation node) {
-         SimpleIdentifier ann_name = node.childEntities.firstWhere((syn) => syn is SimpleIdentifier, orElse: () => null);
-         ArgumentList kwargs = node.childEntities.firstWhere((syn) => syn is ArgumentList, orElse: () => null);
+         SimpleIdentifier ann_name = node.childEntities.firstWhere((syn) => syn is SimpleIdentifier) as SimpleIdentifier;
+         ArgumentList kwargs = node.childEntities.firstWhere((syn) => syn is ArgumentList) as ArgumentList;
          result ??= [];
-         result.add({'name': ann_name, 'arguments': kwargs});
-         _log('\nannotation_name:$ann_name, kwargs:$kwargs', ELevel.info);
+         result!.add({'name': ann_name, 'arguments': kwargs});
+         print('\nannotation_name:$ann_name, kwargs:$kwargs');
       });
-      return result;
+      return result!;
    }
 }
 

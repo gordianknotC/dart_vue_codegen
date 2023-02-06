@@ -1,10 +1,12 @@
 //ignore_for_file: unused_shown_name, unused_import
 import 'dart:io';
+import 'dart:math';
 
 import 'package:analyzer/analyzer.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/syntactic_entity.dart';
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/src/dart/ast/ast.dart';
 
 import 'package:front_end/src/scanner/token.dart'
    show BeginToken, KeywordToken, SimpleToken, StringToken;
@@ -48,6 +50,12 @@ class PrintableDelegation extends DelegatingMap {
 }
 
 T getNode<T extends SyntacticEntity>(AstNode node) {
+   if (node == null) return null;
+   return node.childEntities.firstWhere((syn) => syn is T,
+      orElse: () => null);
+}
+
+T getTokNode<T extends SimpleToken>(AstNode node) {
    if (node == null) return null;
    return node.childEntities.firstWhere((syn) => syn is T,
       orElse: () => null);
@@ -146,9 +154,9 @@ class ArgUtil{
    
    ListLiteralImpl
    get listValue => value is ListLiteralImpl ? (value as ListLiteralImpl) : null;
-   
-   MapLiteralImpl
-   get mapValue => value is MapLiteralImpl ? (value as MapLiteralImpl) : null;
+
+   SetOrMapLiteralImpl
+   get mapValue => value is SetOrMapLiteralImpl ? (value as SetOrMapLiteralImpl) : null;
    
 }
 
@@ -293,7 +301,7 @@ class FormalParameterParser<E extends AstNode> extends PrintableDelegation with 
             func_type ??= FuncTypeParser(syn);
             is_funcType = func_type != null;
          } else if (syn is FieldFormalParameterImpl) {
-            var ref = getNode<KeywordToken>(syn)?.lexeme;
+            var ref = getTokNode<KeywordToken>(syn)?.lexeme;
             is_thisRef = ref == THIS;
             name = is_thisRef ? getNode<SimpleIdentifierImpl>(syn) : null;
             named_type = null;
@@ -633,7 +641,7 @@ abstract class FieldsContainer{
 
 //tested: ok:
 //@fmt:off
-class FieldsParser extends BaseDeclParser<FieldDeclarationImpl, ClassOrMixinDeclarationImpl> implements FieldsContainer{
+class FieldsParser extends BaseDeclParser<FieldDeclarationImpl, ClassDeclarationImpl> implements FieldsContainer{
    bool is_public;
    bool is_const;
    bool is_final;
@@ -1092,7 +1100,7 @@ class Refs<P, R> {
 
 
 
-class MethodsParser extends BaseDeclParser<MethodDeclarationImpl, ClassOrMixinDeclarationImpl> {
+class MethodsParser extends BaseDeclParser<MethodDeclarationImpl, ClassDeclarationImpl> {
    AType                 ret_type;
    FunctionBody          body;
    ClassifiedDeclParser        classOwner;
@@ -1370,7 +1378,7 @@ class InheritedClassDeclParser extends ClassDeclParser{
   InheritedClassDeclParser(ClassDeclarationImpl node) : super(node);
 }
 
-mixin ClassifiedDeclParser<E extends ClassOrMixinDeclarationImpl> on BaseDeclParser<E, CompilationUnitImpl> {
+mixin ClassifiedDeclParser<E extends ClassDeclarationImpl> on BaseDeclParser<E, CompilationUnitImpl> {
    _.Triple<ExtendsClauseImpl, WithClauseImpl, ImplementsClauseImpl>  _cls_ext;
    _.Triple<ExtendsClauseImpl, WithClauseImpl, OnClauseImpl>  _mixin_ext;
    
@@ -1689,15 +1697,17 @@ mixin ImportOrExportParser on PrintableDelegation, SearchableNodes {
       return _content_parser;
    }
    
-  /* bool isFilePath(String path){
+   bool isFilePath(String path){
+      return pkg_resolver.isRelative(path);
       var lib_ptn = RegExp('[a-zA-Z_]+[:]');
       return !path.startsWith(lib_ptn);
    }
    
    bool isBuildinPath(String path){
+      return pkg_resolver.isBuildinImport(path);
       var buildin_path = RegExp('dart:');
       return path.startsWith(buildin_path);
-   }*/
+   }
    
    /*
    
@@ -1802,11 +1812,12 @@ mixin ImportOrExportParser on PrintableDelegation, SearchableNodes {
       shows           = combinators.length == 0 ? null : combinators;
       source_file     = getImportFile(path);
       
+      var l = content.length;
       delegate['path']  = path;
       delegate['shows'] = shows;
       delegate['decl']  = decl_as;
       delegate['content'] = content != null
-         ? content.substring(0, 80) + ' ...'
+         ? content.substring(0, min(l, 60)) + ' ...'
          : null;
       var pth = this is ImportParser
          ? 'imp:$path'
@@ -2123,5 +2134,8 @@ class DartFileParser extends PrintableDelegation with SearchableNodes {
    
    
 }
+
+
+
 
 
